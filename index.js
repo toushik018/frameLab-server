@@ -3,6 +3,7 @@ const app = express();
 const jwt = require('jsonwebtoken');
 const cors = require('cors');
 require('dotenv').config()
+const stripe = require('stripe')(process.env.PAYMENT_SECRET_KEY)
 
 const port = process.env.PORT || 5000;
 
@@ -18,6 +19,7 @@ const verifyJWT = (req, res, next) => {
         return res.status(401).send({ error: true, message: 'unauthorized access' });
 
     }
+
 
     // bearer token
     const token = authorization.split(' ')[1];
@@ -105,13 +107,13 @@ async function run() {
 
         app.get('/users/instructor/:email', async (req, res) => {
             const email = req.params.email;
-          
+
             const query = { email: email }
             const user = await usersCollection.findOne(query);
             const result = { instructor: user?.role === 'instructor' }
             res.send(result);
-          });
-          
+        });
+
 
         app.patch('/users/admin/:id', async (req, res) => {
             const id = req.params.id;
@@ -145,9 +147,7 @@ async function run() {
         // Create a new class
         app.post('/classes', async (req, res) => {
             try {
-                const { className, classImage, instructorName, instructorEmail, availableSeats, price, status } = req.body;
-
-                // Insert the class data into the "classes" collection
+                const { className, classImage, instructorName, instructorEmail, availableSeats, price, status, enrolled } = req.body;
                 const result = await classesCollection.insertOne({
                     className,
                     classImage,
@@ -156,33 +156,46 @@ async function run() {
                     availableSeats,
                     price,
                     status,
+                    enrolled,
                 });
 
-                res.status(201).json(result.ops[0]);
+                res.send(result);
             } catch (error) {
                 console.error('Error creating class:', error);
                 res.status(500).json({ error: 'Internal server error' });
             }
         });
 
-        // Classes
 
-        app.get('/classes', async (req, res) => {
-            const email = req.query.email;
-            if (!email) {
-                res.send([]);
+        // For instructors, based on instructor email
+        app.get('/classes/instructor', async (req, res) => {
+            try {
+                const email = req.query.email;
+
+                if (!email) {
+                    return res.status(400).json({ error: 'Missing email query parameter' });
+                }
+
+                const query = { instructorEmail: email };
+                const result = await classesCollection.find(query).toArray();
+                res.json(result);
+            } catch (error) {
+                console.error('Error fetching instructor classes:', error);
+                res.status(500).json({ error: 'Internal server error' });
             }
-            // const decodedEmail = req.decoded.email;
-            // if (email !== decodedEmail) {
-            //     return res.status(403).send({ error: true, message: 'forbidden access' })
+        });
 
-            // }
+        // For admins, all classes
+        app.get('/classes/admin', async (req, res) => {
+            try {
+                const result = await classesCollection.find().toArray();
+                res.json(result);
+            } catch (error) {
+                console.error('Error fetching all classes:', error);
+                res.status(500).json({ error: 'Internal server error' });
+            }
+        });
 
-            const query = { instructorEmail: email };
-            const result = await classesCollection.find(query).toArray();
-            res.send(result);
-
-        })
 
 
         //Selected Classes
@@ -219,21 +232,91 @@ async function run() {
         })
 
 
-        // Making admin
+        // approve, deny and feedback
 
-        app.patch('/classes/admin/:id', async (req, res) => {
+        app.patch('/classes/approve/:id', async (req, res) => {
             const id = req.params.id;
-            const filter = { _id: new Object(id) };
-
+            const info = req.body;
+            // console.log(info);
+            const filter = { _id: new ObjectId(id) };
             const updateDoc = {
                 $set: {
-                    role: 'admin'
-                },
+                    ...info
+                }
             };
-
             const result = await classesCollection.updateOne(filter, updateDoc);
+            res.send(result);
+        });
+
+
+
+
+        app.post('/classes/:classId/feedback', async (req, res) => {
+            const { classId } = req.params;
+            const { feedback } = req.body;
+
+            try {
+                const result = await classesCollection.findOneAndUpdate(
+                    { _id: new ObjectId(classId) },
+                    { $set: { feedback } },
+                    { returnOriginal: false }
+                );
+
+                if (result.value) {
+                    res.status(200).send({ message: 'Feedback submitted successfully' });
+                } else {
+                    res.status(404).send({ error: 'Class not found' });
+                }
+            } catch (error) {
+                console.error('Error submitting feedback:', error);
+                res.status(500).send({ error: 'Failed to submit feedback' });
+            }
+        });
+
+
+
+        // // Making admin
+
+        // app.patch('/classes/admin/:id', async (req, res) => {
+        //     const id = req.params.id;
+        //     const filter = { _id: new Object(id) };
+
+        //     const updateDoc = {
+        //         $set: {
+        //             role: 'admin'
+        //         },
+        //     };
+
+        //     const result = await classesCollection.updateOne(filter, updateDoc);
+        //     res.send(result)
+        // })
+
+
+
+        // crate payment intent
+
+        app.post('/create-payment-intent', verifyJWT, async (req, res) => {
+            const { price } = req.body;
+            const amount = Math.round(price * 100);
+            console.log(price, amount);
+            const paymentIntent = await stripe.paymentIntents.create({
+                amount: amount,
+                currency: 'usd',
+                payment_method_types: ["card"]
+            });
+            res.send({
+                clientSecret: paymentIntent.client_secret
+            });
+        })
+
+        app.get('/payment/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+
+            const result = await selectedClassesCollection.findOne(query);
             res.send(result)
         })
+
 
 
 
