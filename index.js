@@ -73,6 +73,16 @@ async function run() {
 
         })
 
+        app.get('/user/:email', async (req, res) => {
+            const email = req.params.email;
+
+            const query = {email}
+            const result = await usersCollection.findOne(query);
+            res.send(result)
+        })
+
+
+
         app.post('/users', async (req, res) => {
             const user = req.body;
             const query = { email: user.email }
@@ -147,7 +157,7 @@ async function run() {
         // Create a new class
         app.post('/classes', async (req, res) => {
             try {
-                const { className, classImage, instructorName, instructorEmail, availableSeats, price, status, enrolled } = req.body;
+                const { className, classImage, instructorName, instructorEmail, availableSeats, price, status, enrolled, instructorId } = req.body;
                 const result = await classesCollection.insertOne({
                     className,
                     classImage,
@@ -157,6 +167,7 @@ async function run() {
                     price,
                     status,
                     enrolled,
+                    instructorId
                 });
 
                 res.send(result);
@@ -199,7 +210,7 @@ async function run() {
         app.get('/classes', async (req, res) => {
             try {
                 const result = await classesCollection.find().toArray();
-                res.json(result);
+                res.send(result);
             } catch (error) {
                 console.error('Error fetching all classes:', error);
                 res.status(500).json({ error: 'Internal server error' });
@@ -212,6 +223,14 @@ async function run() {
         app.get('/approved-classes', async (req, res) => {
             try {
               const result = await classesCollection.find({ status: 'approved' }).toArray();
+              const payments = await paymentCollection.find().toArray();
+                 for (let cls of result){
+                    const enroll = payments.filter(i => i.classId == cls._id).length;
+                    
+                    cls.enrolled = enroll;
+
+                    
+                }
               res.json(result);
             } catch (error) {
               console.error('Error fetching approved classes:', error);
@@ -233,9 +252,19 @@ async function run() {
                 res.status(500).json({ error: 'Internal server error' });
             }
 
-
         });
 
+
+        // 
+
+        app.get('/enrolled/:email', async (req, res) => {
+            const email = req.params.email;
+            console.log(email);
+
+            const query = {email}
+            const result = await paymentCollection.find(query).toArray();
+            res.send(result)
+        })
 
 
         //Selected Classes
@@ -344,7 +373,7 @@ async function run() {
 
 
         app.post('/payment', async (req, res) => {
-            const { email, transactionId, price, date } = req.body;
+            const { email, transactionId, price, date, instructorId, classId, name } = req.body;
 
             console.log(date);
 
@@ -355,6 +384,9 @@ async function run() {
                     transactionId,
                     price,
                     date,
+                    instructorId,
+                    classId,
+                    name
                 });
 
                 if (result.insertedId) {
