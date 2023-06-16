@@ -55,8 +55,6 @@ async function run() {
         const selectedClassesCollection = client.db("frameLabDB").collection("selectedClasses");
         const paymentCollection = client.db("frameLabDB").collection("payment");
 
-
-
         app.post('/jwt', (req, res) => {
             const user = req.body;
             const token = jwt.sign(user, process.env.ACCESS_TOKEN, {
@@ -94,8 +92,6 @@ async function run() {
             const result = await usersCollection.insertOne(user);
             res.send(result)
         })
-
-
 
         // making admin
 
