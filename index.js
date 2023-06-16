@@ -305,22 +305,7 @@ async function run() {
 
 
 
-        // // Making admin
-
-        // app.patch('/classes/admin/:id', async (req, res) => {
-        //     const id = req.params.id;
-        //     const filter = { _id: new Object(id) };
-
-        //     const updateDoc = {
-        //         $set: {
-        //             role: 'admin'
-        //         },
-        //     };
-
-        //     const result = await classesCollection.updateOne(filter, updateDoc);
-        //     res.send(result)
-        // })
-
+    
 
 
         // crate payment intent
