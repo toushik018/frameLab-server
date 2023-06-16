@@ -192,7 +192,7 @@ async function run() {
             }
         });
 
-        // For admins, all classes
+        // For admins, all classes.
         app.get('/classes/admin', async (req, res) => {
             try {
                 const result = await classesCollection.find().toArray();
@@ -297,7 +297,7 @@ async function run() {
         })
 
 
-        // approve, deny and feedback
+        // approve, deny and feedback.
 
         app.patch('/classes/approve/:id', async (req, res) => {
             const id = req.params.id;
@@ -312,8 +312,6 @@ async function run() {
             const result = await classesCollection.updateOne(filter, updateDoc);
             res.send(result);
         });
-
-
 
 
         app.post('/classes/:id/feedback', async (req, res) => {
