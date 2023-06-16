@@ -196,6 +196,17 @@ async function run() {
             }
         });
 
+        app.get('/classes', async (req, res) => {
+            try {
+              const result = await classesCollection.find().toArray();
+              res.json(result);
+            } catch (error) {
+              console.error('Error fetching all classes:', error);
+              res.status(500).json({ error: 'Internal server error' });
+            }
+          });
+          
+
 
         app.get('/classes/:id', async (req, res) => {
             const itemId = req.params.id;
