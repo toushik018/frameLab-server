@@ -342,10 +342,7 @@ async function run() {
 
 
 
-
-
-
-        // crate payment intent
+        // crate payment intent apis
 
         app.post('/create-payment-intent', verifyJWT, async (req, res) => {
             const { price } = req.body;
@@ -363,7 +360,7 @@ async function run() {
 
 
 
-        //         payment related things           //
+        //  payment related things   //
 
 
         app.post('/payment', async (req, res) => {
@@ -372,7 +369,7 @@ async function run() {
             console.log(date);
 
             try {
-                // Insert the payment data into the 'payments' collection
+                
                 const result = await paymentCollection.insertOne({
                     email,
                     transactionId,
@@ -384,14 +381,14 @@ async function run() {
                 });
 
                 if (result.insertedId) {
-                    // Payment data saved successfully
+                   
                     res.status(200).json({ insertedId: result.insertedId });
                 } else {
-                    // Failed to save payment data
+                   
                     res.status(500).json({ error: 'Failed to save payment data' });
                 }
             } catch (error) {
-                // Handle any error that occurred during the database operation
+                
                 console.error('Error saving payment data:', error);
                 res.status(500).json({ error: 'An error occurred while saving payment data' });
             }
