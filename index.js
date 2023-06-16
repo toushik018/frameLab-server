@@ -76,7 +76,7 @@ async function run() {
         app.get('/user/:email', async (req, res) => {
             const email = req.params.email;
 
-            const query = {email}
+            const query = { email }
             const result = await usersCollection.findOne(query);
             res.send(result)
         })
@@ -222,22 +222,22 @@ async function run() {
 
         app.get('/approved-classes', async (req, res) => {
             try {
-              const result = await classesCollection.find({ status: 'approved' }).toArray();
-              const payments = await paymentCollection.find().toArray();
-                 for (let cls of result){
+                const result = await classesCollection.find({ status: 'approved' }).toArray();
+                const payments = await paymentCollection.find().toArray();
+                for (let cls of result) {
                     const enroll = payments.filter(i => i.classId == cls._id).length;
-                    
+
                     cls.enrolled = enroll;
 
-                    
+
                 }
-              res.json(result);
+                res.json(result);
             } catch (error) {
-              console.error('Error fetching approved classes:', error);
-              res.status(500).json({ error: 'Internal server error' });
+                console.error('Error fetching approved classes:', error);
+                res.status(500).json({ error: 'Internal server error' });
             }
-          });
-          
+        });
+
 
 
 
@@ -261,7 +261,7 @@ async function run() {
             const email = req.params.email;
             console.log(email);
 
-            const query = {email}
+            const query = { email }
             const result = await paymentCollection.find(query).toArray();
             res.send(result)
         })
