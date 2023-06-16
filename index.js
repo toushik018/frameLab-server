@@ -198,14 +198,28 @@ async function run() {
 
         app.get('/classes', async (req, res) => {
             try {
-              const result = await classesCollection.find().toArray();
+                const result = await classesCollection.find().toArray();
+                res.json(result);
+            } catch (error) {
+                console.error('Error fetching all classes:', error);
+                res.status(500).json({ error: 'Internal server error' });
+            }
+        });
+
+
+        // Approved classes
+
+        app.get('/approved-classes', async (req, res) => {
+            try {
+              const result = await classesCollection.find({ status: 'approved' }).toArray();
               res.json(result);
             } catch (error) {
-              console.error('Error fetching all classes:', error);
+              console.error('Error fetching approved classes:', error);
               res.status(500).json({ error: 'Internal server error' });
             }
           });
           
+
 
 
         app.get('/classes/:id', async (req, res) => {
@@ -305,7 +319,7 @@ async function run() {
 
 
 
-    
+
 
 
         // crate payment intent
@@ -326,18 +340,37 @@ async function run() {
 
 
 
-        // payment related things
-        app.post('/payments', verifyJWT, async (req, res) => {
-            const payment = req.body;
-            const insertResult = await paymentCollection.insertOne(payment);
-        
-            const classIds = payment.items.map(id => new ObjectId(id));
-            const query = { _id: { $in: classIds } };
-            const deleteResult = await selectedClassesCollection.deleteMany(query);
-        
-            res.send({ insertResult, deleteResult });
+        //         payment related things           //
+
+
+        app.post('/payment', async (req, res) => {
+            const { email, transactionId, price, date } = req.body;
+
+            console.log(date);
+
+            try {
+                // Insert the payment data into the 'payments' collection
+                const result = await paymentCollection.insertOne({
+                    email,
+                    transactionId,
+                    price,
+                    date,
+                });
+
+                if (result.insertedId) {
+                    // Payment data saved successfully
+                    res.status(200).json({ insertedId: result.insertedId });
+                } else {
+                    // Failed to save payment data
+                    res.status(500).json({ error: 'Failed to save payment data' });
+                }
+            } catch (error) {
+                // Handle any error that occurred during the database operation
+                console.error('Error saving payment data:', error);
+                res.status(500).json({ error: 'An error occurred while saving payment data' });
+            }
         });
-        
+
 
 
         app.get('/payment/:id', async (req, res) => {
