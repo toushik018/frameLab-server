@@ -49,11 +49,11 @@ const client = new MongoClient(uri, {
 async function run() {
     try {
         // Connect the client to the server	(optional starting in v4.7)
-        await client.connect();
 
         const usersCollection = client.db("frameLabDB").collection("users");
         const classesCollection = client.db("frameLabDB").collection("classes");
         const selectedClassesCollection = client.db("frameLabDB").collection("selectedClasses");
+        const paymentCollection = client.db("frameLabDB").collection("payment");
 
 
 
@@ -197,6 +197,21 @@ async function run() {
         });
 
 
+        app.get('/classes/:id', async (req, res) => {
+            const itemId = req.params.id;
+            const query = { _id: new ObjectId(itemId) }
+            try {
+                const result = await classesCollection.findOne(query);
+                res.json(result);
+            } catch (error) {
+                console.error('Error fetching all classes:', error);
+                res.status(500).json({ error: 'Internal server error' });
+            }
+
+
+        });
+
+
 
         //Selected Classes
 
@@ -251,13 +266,16 @@ async function run() {
 
 
 
-        app.post('/classes/:classId/feedback', async (req, res) => {
-            const { classId } = req.params;
+        app.post('/classes/:id/feedback', async (req, res) => {
+            const { id } = req.params;
             const { feedback } = req.body;
+
+            console.log(feedback);
+            console.log(id);
 
             try {
                 const result = await classesCollection.findOneAndUpdate(
-                    { _id: new ObjectId(classId) },
+                    { _id: new ObjectId(id) },
                     { $set: { feedback } },
                     { returnOriginal: false }
                 );
@@ -272,6 +290,7 @@ async function run() {
                 res.status(500).send({ error: 'Failed to submit feedback' });
             }
         });
+
 
 
 
@@ -309,6 +328,22 @@ async function run() {
             });
         })
 
+
+
+        // payment related things
+        app.post('/payments', verifyJWT, async (req, res) => {
+            const payment = req.body;
+            const insertResult = await paymentCollection.insertOne(payment);
+        
+            const classIds = payment.items.map(id => new ObjectId(id));
+            const query = { _id: { $in: classIds } };
+            const deleteResult = await selectedClassesCollection.deleteMany(query);
+        
+            res.send({ insertResult, deleteResult });
+        });
+        
+
+
         app.get('/payment/:id', async (req, res) => {
             const id = req.params.id;
             const query = { _id: new ObjectId(id) };
@@ -316,7 +351,6 @@ async function run() {
             const result = await selectedClassesCollection.findOne(query);
             res.send(result)
         })
-
 
 
 
